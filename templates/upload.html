@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Upload</title>
+    <style>
+        form {
+            display: flex;
+            flex-direction: column;
+        }
+
+        form input {
+            max-width: 200px;
+            height: 20px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>File uploader</h1>
+    <form id="upload-form" action="/upload" method="POST" enctype="multipart/form-data">
+        <strong>Files:</strong><br>
+        <input id="file-picker" type="file" name="file" accept="image/*" />
+        <input type="text" name="datetime" value="2020-01-30 00:00:00" />
+        <input type="text" name="location" value="Netanya" />
+        <div id="msg"></div>
+        <input type="submit" value="Upload!" id="upload-button">
+    </form>
+</body>
+
+</html>
