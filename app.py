@@ -16,11 +16,18 @@ def index():
 
 
 @app.route("/upload", methods=['POST'])
+
+
+
 def upload():
+    #global variables
     target_gallery = os.path.join(APP_ROOT, 'static/images/gallery')
     target_temp = os.path.join(APP_ROOT, 'static/images/temp')
+
+
     # Get the fisrt image from form
     image_file = request.files.getlist("file")[0]
+
     # Save image in temp folder
     helper.save_image(image_file, target_temp)
 
@@ -29,85 +36,96 @@ def upload():
     datetime = request.form['datetime']
     location = request.form['location']
     # insert DB
-    temp_id = mydb.insert_temp_image(full_path_of_image, datetime, location)
+    image_id = mydb.insert_temp_image(full_path_of_image, datetime, location)
+
+    print("-------------------------------------------------")
+    print("in this point we entered the image to temp table and now checking if the image has a face")
+    print("-------------------------------------------------")
+    
     # Check if there is face at image
     if helper.is_there_a_face_in_the_image(image_file):
         # if have - check if know
         # TODO: take knowns from DB and not from folder
+        print("-------------------------------------------------")
+        print("in this point we got an image with a face, now checking is the face is known")
+        print("-------------------------------------------------")
         check_known = helper.is_the_face_known('static/images/knowns', full_path_of_image)
-        print("check_known")
+
         # if know save at gallery and remove from temp and update galley DB (know, new path)
         if check_known['status']:
-            print(" ")
-            print("This pic is known, need to update path to gallery")
+            print("-------------------------------------------------")
+            print("the face is knowns, now we save the image in gallery and updateing it's path")
+            print("-------------------------------------------------")
             # Save image in gallery folder
-            print(" ")
-            print("target gallery: " + target_gallery)
-            print(" ")
             #TODO:need to move the pic from temp to gallery not save new, after nees to get the new path to the pic for DB
             new_path = helper.save_image(image_file, target_gallery)
-            # update path in db
-            #full_path_of_image = helper.get_path_image(image_file, new_path)
-            print(" ")
-            print("new full path of the image: " + new_path)
-            print(" ")
-            print(type(target_gallery))
-            print("")
-            #gallery_id = mydb.insert_pictuers_image(new_path, datetime, location)
-            mydb.update_path_original_image(temp_id, new_path)
-            # update in db table picsofknown
-            print("------")
-            print("is KNOWN!!!")
-            print(check_known)
-            print("------")
-            mydb.insert_to_PicsOfKnown(check_known['id'], temp_id)
-            mydb.delete_from_temp(temp_id)
-            return jsonify(action="done", known=check_known['name'], path_image=new_path)
-        # else if no know but have face - asking from user name to face with id of image in gallrey db
-        else:
-            print("    ")
-            print(temp_id)
-            print("    ")
 
-            # return render_template(get_name.html)?
-            return jsonify(action="add name", temp_id=temp_id)
-    # return jsonify(action="fail")
+            # update path in db
+            mydb.update_path_original_image(image_id, new_path)
+            # update in db table picsofknown
+            mydb.insert_to_PicsOfKnown(check_known['id'], image_id)
+            mydb.delete_from_temp(image_id)
+            return jsonify(action="show image", known=check_known['name'], path_image=new_path)
+
+        # else if no know but have face - 
+        # asking from user name to face with id of image in gallrey db
+        else:
+            print("-------------------------------------------------")
+            print("the face is not known we asking for a name and ")
+            print("-------------------------------------------------")
+            #when getting to this point (for now) we need to redirect to http://35.238.145.42/askName
+            print("go to http://35.238.145.42/askName")
+            return jsonify(action="ask name", temp_id=image_id)
 
     # else if no face at image - move image to gallrey folder and update gallery DB (path)
-    helper.save_image(image_file, target_gallery)
-    mydb.update_path_original_image(image_file, target_gallery)
+    print("-------------------------------------------------")
+    print("there is no face in this image save and update")
+    print("-------------------------------------------------")
+    new_path = helper.save_image(image_file, target_gallery)
+    mydb.update_path_original_image(new_path, target_gallery)
+    mydb.delete_from_temp(image_id)
+    return jsonify(action="show image", temp_id=image_id)
 
 
 @app.route("/askName", methods=['GET'])
 def askName():
-    # save the face in knowns folder
-    # save in db - known table
     return render_template("get_name.html")
 
 
 @app.route("/enterName", methods=['POST'])
 def enterName():
-    # then get name face and cut face and save face image at knowns folder then save at knowns DB
+    # then get name face 
+    # cut face and save face image at knowns folder 
+    # save at knowns DB
     # get id of knowns then move original image to gallrey folder and update gallery DB (path, known)
-    # get name and gallery id
+    # get name and image id
     name_face = request.form['inputName']
-    gallery_id = request.form['galleryId']
-    print("    ")
-    print("the name we got: " + name_face)
-    print("the gallery id is: " + gallery_id)
-    print("    ")
+    image_id = request.form['galleryId']
+    print("-------------------------------------------------")
+    print("got the name and id")
+    print("-------------------------------------------------")
 
+    print("this is the image id: ")
+    print(image_id)
+    print("")
     # cut face from original image and save in knowns folder
-    path_original_image = mydb.get_image_path_by_id(gallery_id)
-    print("    ")
-    print("    ")
+    path_original_image = mydb.get_image_path_by_id(image_id)
+    print("")
     print(path_original_image)
-    print("    ")
-    print("    ")
+    print("--------------------------------------------")
+    print("got the path to the image")
+    print("--------------------------------------------")
+
+    print("")
 
     # cut and save
     face_path = helper.cut_face_and_save_and_return_new_path(path_original_image)
-
+    print("-------------------------------------------------")
+    print("got the face path from DB: ")    
+    print("-------------------------------------------------")
+    print("")
+    print(face_path)
+    print("")
 
     # save in knowns DB and get known id
     known_id = mydb.insert_known_image(name_face, face_path)
@@ -121,9 +139,9 @@ def enterName():
     os.rename(path_original_image, new_path)
 
     # update gallery DB (path)
-    mydb.update_path_original_image(gallery_id, new_path)
-    # add to PicsOfKnown DB (gallery_id, known_id)
-    mydb.insert_to_PicOfKnown(known_id, gallery_id)
+    mydb.update_path_original_image(image_id, new_path)
+    # add to PicsOfKnown DB (image_id, known_id)
+    mydb.insert_to_PicOfKnown(known_id, image_id)
 
     return jsonify(action="done")
 

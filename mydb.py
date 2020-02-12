@@ -19,16 +19,8 @@ def get_last_id(table):
     mycursor = mydb.cursor()
 
     mycursor.execute('SELECT id FROM ' + table + ' ORDER BY id DESC LIMIT 1')
-    print("")
-    print("---SQL---")
-    print('SELECT id FROM ' + table + ' ORDER BY id DESC LIMIT 1')
-    
-    #iprint(mycursor.fetchone())
-    #print(mycursor.fetchone()[0])
-    print("")
+
     return mycursor.fetchone()[0]
-
-
 
 
 def insert_known_image(name_face, face_path):
@@ -61,7 +53,6 @@ def insert_temp_image(path, datetime, location):
     return get_last_id(temp_table)
 
 
-
 def insert_pictuers_image(path, datetime, location):
     mydb = connect()
     mycursor = mydb.cursor()
@@ -77,15 +68,6 @@ def insert_pictuers_image(path, datetime, location):
     return get_last_id(pictuers_table)
 
 
-def update_path_original_image(image_id, image_path):
-    mydb = connect()
-    mycursor = mydb.cursor()
-    query = ("UPDATE %s SET pic_path = '%s' WHERE id = %d" % (pictuers_table, image_path, image_id))
-    mycursor.execute(query)
-
-    mydb.commit()
-
-
 def insert_to_PicsOfKnown(id_face, id_full_image):
     mydb = connect()
     mycursor = mydb.cursor()
@@ -99,6 +81,16 @@ def insert_to_PicsOfKnown(id_face, id_full_image):
     mydb.commit()
     # get the id
     return get_last_id(pics_of_known_table)
+
+
+def update_path_original_image(image_id, image_path):
+    mydb = connect()
+    mycursor = mydb.cursor()
+    query = ("UPDATE %s SET pic_path = '%s' WHERE id = %d" % (pictuers_table, image_path, image_id))
+    mycursor.execute(query)
+
+    mydb.commit()
+
 
 def delete_from_knowns(image_id):
     mydb = connect()
@@ -121,12 +113,20 @@ def delete_from_PicsOfKnowns(image_id):
     mycursor.execute('DELETE FROM %s WHERE id = %d' % (pics_of_known_table, image_id))
 
 
-def get_image_path_by_id(id):
+def get_image_path_by_id(image_id):
     mydb = connect()
     mycursor = mydb.cursor()
+    print("--------------------------------------------")
+    print("get image by path")
+    print(image_id)
+    print(type(image_id))
+    print("fail?")
 
-    mycursor.execute('SELECT pic_path FROM ' +
-                     pictuers_table + ' WHERE id = ' + id)
+    mycursor.execute('SELECT pic_path FROM %s WHERE id = %d' % (temp_table, int(image_id)))
+    print("--------------------------------------------")
+    print("the image was passed")
+    print("--------------------------------------------")
+
 
     return mycursor.fetchone()[0]
 
