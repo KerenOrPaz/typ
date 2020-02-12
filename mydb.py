@@ -86,7 +86,20 @@ def insert_to_PicsOfKnown(id_face, id_full_image):
 def update_path_original_image(image_id, image_path):
     mydb = connect()
     mycursor = mydb.cursor()
-    query = ("UPDATE %s SET pic_path = '%s' WHERE id = %d" % (pictuers_table, image_path, image_id))
+    print("-------------------------------------------------")
+    print("in DB: the vars that we pass and the type in the same order: ")
+    print(image_id)
+    print(type(image_id))
+    print(image_path)
+    print(type(image_path))
+    print("-------------------------------------------------")
+
+
+    query = ("UPDATE %s SET pic_path = '%s' WHERE id = %d" % (pictuers_table, image_path, int(image_id)))
+    print("-------------------------------------------------")
+    print("the query that we are ex")
+    print(query)
+    print("-------------------------------------------------")
     mycursor.execute(query)
 
     mydb.commit()

@@ -50,6 +50,8 @@ def upload():
         print("in this point we got an image with a face, now checking is the face is known")
         print("-------------------------------------------------")
         check_known = helper.is_the_face_known('static/images/knowns', full_path_of_image)
+        print("is the face known? ")
+        print(check_known['status'])
 
         # if know save at gallery and remove from temp and update galley DB (know, new path)
         if check_known['status']:
@@ -79,10 +81,11 @@ def upload():
 
     # else if no face at image - move image to gallrey folder and update gallery DB (path)
     print("-------------------------------------------------")
-    print("there is no face in this image save and update")
+    print("there is no face in this image save and update the image id is:")
+    print(image_id)
     print("-------------------------------------------------")
     new_path = helper.save_image(image_file, target_gallery)
-    mydb.update_path_original_image(new_path, target_gallery)
+    mydb.update_path_original_image(image_id, new_path)
     mydb.delete_from_temp(image_id)
     return jsonify(action="show image", temp_id=image_id)
 
@@ -129,19 +132,44 @@ def enterName():
 
     # save in knowns DB and get known id
     known_id = mydb.insert_known_image(name_face, face_path)
+    print("-------------------------------------------------")
+    print("at this point we got an id for the face image, this is the known id:")
+    print(known_id)
+    print("now we need to move the pictuer to gallery, not the face")
+    print("this is the path of the image:")
+    print(path_original_image)
+    print("-------------------------------------------------")
 
     # move original image to gallrey folder
     target_to_gallery = os.path.join(APP_ROOT, 'static/images/gallery')
     if not os.path.isdir(target_to_gallery):
         os.mkdir(target_to_gallery)
     new_path = "/".join([target_to_gallery, path_original_image.split('/')[-1]])
+    print("-------------------------------------------------")
+    print("this is the new path for the full image: ")
+    print(new_path)
+    print("-------------------------------------------------")
 
-    os.rename(path_original_image, new_path)
+    
+
+    print("-------------------------------------------------")
+    print(new_path)
+    print("we moved the image to gallery, and now we updateing in DB")
+    print("in app.py the vars that we move to DB ant the type are: (in this order) the image id and the path to the full image ")
+    print(image_id)
+    print(type(image_id))
+    print(new_path)
+    print(type(new_path))
+    print("-------------------------------------------------")
+    #mydb.update_path_original_image(image_id, new_path)
 
     # update gallery DB (path)
     mydb.update_path_original_image(image_id, new_path)
+    print("-------------------------------------------------")
+    print("path for the image was updated")
     # add to PicsOfKnown DB (image_id, known_id)
-    mydb.insert_to_PicOfKnown(known_id, image_id)
+    mydb.insert_to_PicsOfKnown(known_id, image_id)
+    os.rename(path_original_image, new_path)
 
     return jsonify(action="done")
 

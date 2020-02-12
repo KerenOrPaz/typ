@@ -56,6 +56,10 @@ def is_the_face_known(known_folder_path, unknown_image_path):
 
 # save_face_in_known(face_image) void
 def cut_face_and_save_and_return_new_path(image_path):
+    print("-------------------")
+    print(image_path)
+    print("-------------------")
+
     image_open = Image.open(image_path)
 
     image = face_recognition.load_image_file(image_path)
@@ -73,6 +77,7 @@ def cut_face_and_save_and_return_new_path(image_path):
 
         destination = "/".join([target, image_open.filename.split('/')[-1]])
         pil_image.save(destination)
+        print("the face path is:")
         print(destination)
         return destination
 
