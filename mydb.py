@@ -116,7 +116,9 @@ def delete_from_temp(image_id):
     mydb = connect()
     mycursor = mydb.cursor()
 
-    mycursor.execute('DELETE FROM %s WHERE id = %d' % (pictuers_table, image_id))
+    mycursor.execute('DELETE FROM %s WHERE id = %d' % (temp_table, image_id))
+
+
 
 
 def delete_from_PicsOfKnowns(image_id):

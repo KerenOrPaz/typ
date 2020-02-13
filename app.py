@@ -16,9 +16,6 @@ def index():
 
 
 @app.route("/upload", methods=['POST'])
-
-
-
 def upload():
     #global variables
     target_gallery = os.path.join(APP_ROOT, 'static/images/gallery')
@@ -36,7 +33,7 @@ def upload():
     datetime = request.form['datetime']
     location = request.form['location']
     # insert DB
-    image_id = mydb.insert_temp_image(full_path_of_image, datetime, location)
+    image_id = mydb.insert_pictuers_image(full_path_of_image, datetime, location)
 
     print("-------------------------------------------------")
     print("in this point we entered the image to temp table and now checking if the image has a face")
@@ -45,7 +42,6 @@ def upload():
     # Check if there is face at image
     if helper.is_there_a_face_in_the_image(image_file):
         # if have - check if know
-        # TODO: take knowns from DB and not from folder
         print("-------------------------------------------------")
         print("in this point we got an image with a face, now checking is the face is known")
         print("-------------------------------------------------")
@@ -58,15 +54,14 @@ def upload():
             print("-------------------------------------------------")
             print("the face is knowns, now we save the image in gallery and updateing it's path")
             print("-------------------------------------------------")
-            # Save image in gallery folder
-            #TODO:need to move the pic from temp to gallery not save new, after nees to get the new path to the pic for DB
+            # Save image in gallery folder and delete from temp folder
             new_path = helper.save_image(image_file, target_gallery)
+            os.remove(full_path_of_image)
 
             # update path in db
             mydb.update_path_original_image(image_id, new_path)
             # update in db table picsofknown
             mydb.insert_to_PicsOfKnown(check_known['id'], image_id)
-            mydb.delete_from_temp(image_id)
             return jsonify(action="show image", known=check_known['name'], path_image=new_path)
 
         # else if no know but have face - 
@@ -76,7 +71,7 @@ def upload():
             print("the face is not known we asking for a name and ")
             print("-------------------------------------------------")
             #when getting to this point (for now) we need to redirect to http://35.238.145.42/askName
-            print("go to http://35.238.145.42/askName")
+            print("go to http://35.238.145.42/askName the id is: " + image_id)
             return jsonify(action="ask name", temp_id=image_id)
 
     # else if no face at image - move image to gallrey folder and update gallery DB (path)
@@ -86,7 +81,7 @@ def upload():
     print("-------------------------------------------------")
     new_path = helper.save_image(image_file, target_gallery)
     mydb.update_path_original_image(image_id, new_path)
-    mydb.delete_from_temp(image_id)
+    #TODO: show image
     return jsonify(action="show image", temp_id=image_id)
 
 
@@ -170,8 +165,8 @@ def enterName():
     # add to PicsOfKnown DB (image_id, known_id)
     mydb.insert_to_PicsOfKnown(known_id, image_id)
     os.rename(path_original_image, new_path)
-
-    return jsonify(action="done")
+    #TODO: show image
+    return jsonify(action="show image")
 
 
 @app.route("/showImage", methods=['GET'])
@@ -192,7 +187,3 @@ def delete():
 
     return jsonify(action="done")
 
-@app.route("/test")
-def test():
-    mydb.get_list_of_knows()
-    return jsonify(action="done")
