@@ -62,7 +62,8 @@ def upload():
             mydb.update_path_original_image(image_id, new_path)
             # update in db table picsofknown
             mydb.insert_to_PicsOfKnown(check_known['id'], image_id)
-            return jsonify(action="show image", known=check_known['name'], path_image=new_path)
+            client_path_image = helper.convert_server_path_to_client_path_image(new_path)
+            return jsonify(action="show image", known=check_known['name'], path_image=client_path_image)
 
         # else if no know but have face - 
         # asking from user name to face with id of image in gallrey db
@@ -71,8 +72,8 @@ def upload():
             print("the face is not known we asking for a name and ")
             print("-------------------------------------------------")
             #when getting to this point (for now) we need to redirect to http://35.238.145.42/askName
-            print("go to http://35.238.145.42/askName the id is: " + image_id)
-            return jsonify(action="ask name", temp_id=image_id)
+            print("go to http://35.238.145.42/askName the id is: {image_id}")
+            return jsonify(action="ask name", image_id=image_id)
 
     # else if no face at image - move image to gallrey folder and update gallery DB (path)
     print("-------------------------------------------------")
@@ -82,7 +83,7 @@ def upload():
     new_path = helper.save_image(image_file, target_gallery)
     mydb.update_path_original_image(image_id, new_path)
     #TODO: show image
-    return jsonify(action="show image", temp_id=image_id)
+    return jsonify(action="show image", image_id=image_id)
 
 
 @app.route("/askName", methods=['GET'])
@@ -166,24 +167,35 @@ def enterName():
     mydb.insert_to_PicsOfKnown(known_id, image_id)
     os.rename(path_original_image, new_path)
     #TODO: show image
-    return jsonify(action="show image")
+    return jsonify(action="show image", image_id=image_id)
 
 
-@app.route("/showImage", methods=['GET'])
-def showImage():
-    return request.args.get('id')
+@app.route("/showImage/<id>", methods=['GET'])
+def showImage(id):
+    result = mydb.get_full_details_of_image(id)
+    result["path"] = helper.convert_server_path_to_client_path_image(result["path"])
+    return jsonify( result )
+
+@app.route("/showImages", methods=['GET'])
+def showImages():
+    results = mydb.get_list_of_pictuers()
+    for child in results:
+        child["pic_path"] = helper.convert_server_path_to_client_path_image(child["pic_path"])
+    return jsonify(results)
 
 
-@app.route("/search", methods=['GET'])
-def search():
-    return "map"
+@app.route("/search/<search>", methods=['GET'])
+def search(search):
+    return jsonify( mydb.get_list_of_pictuers_by_name_known(search) )
 
 
-@app.route("/delete", methods=['DELETE'])
-def delete():
-    gallery_id = request.form['galleryId']
+@app.route("/delete/<gallery_id>", methods=['DELETE'])
+def delete(gallery_id):
     image_path = mydb.get_image_path_by_id(gallery_id)
-    os.remove(image_path)
+    mydb.delete_from_pictuers(gallery_id)
+    try:
+        os.remove(image_path)
+    except:
+        return jsonify(action="Fail")
 
     return jsonify(action="done")
-

@@ -93,6 +93,14 @@ def save_image(file, target):
     file.save(full_path_of_image)
     return full_path_of_image
 
+def move_image(file, target_from, target_to):
+    # check if there folder, if not create
+    if not os.path.isdir(target_to):
+        os.mkdir(target_to)
+        
+    full_path_of_image = get_path_image(file, target_to)
+    os.rename(target_from, full_path_of_image)
+    return full_path_of_image
 # get path og image
 
 
@@ -100,3 +108,14 @@ def get_path_image(file, target):
     filename = file.filename
     return "/".join([target, filename])
 
+def convert_server_path_to_client_path_image(server_path):
+    flag = False
+    path_to_array = server_path.split("/")
+    path=""
+    for item in path_to_array:
+        if flag:
+            path += "/" + item
+        elif item == "my_flask_app":
+            flag = True
+    print(path)
+    return path
