@@ -30,8 +30,6 @@ def is_the_face_known(known_folder_path, unknown_image_path):
         known_from_db = list_of_knowns[i]
         path_face_db = known_from_db[2]
 
-        # path_target = '/home/rsa-key-20200109/my_flask_app/static/images/knowns/' + known_image_path
-
         known = face_recognition.load_image_file(path_face_db)
         known_face_encoding = face_recognition.face_encodings(known)[0]
 
@@ -56,9 +54,6 @@ def is_the_face_known(known_folder_path, unknown_image_path):
 
 # save_face_in_known(face_image) void
 def cut_face_and_save_and_return_new_path(image_path):
-    print("-------------------")
-    print(image_path)
-    print("-------------------")
 
     image_open = Image.open(image_path)
 
