@@ -82,6 +82,7 @@ def upload():
     print("-------------------------------------------------")
     new_path = helper.save_image(image_file, target_gallery)
     mydb.update_path_original_image(image_id, new_path)
+    os.remove(full_path_of_image)
     #TODO: show image
     return jsonify(action="show image", image_id=image_id)
 
