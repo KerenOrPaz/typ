@@ -14,12 +14,22 @@ def index():
 
 @app.route("/upload", methods=['POST'])
 def upload():
+    print("/upload")
     target_gallery = os.path.join(APP_ROOT, 'static/images/gallery')
     target_temp = os.path.join(APP_ROOT, 'static/images/temp')
     
-    image_file = request.files.getlist("file")[0]
+    # print(request.form['file'])
+    #image_file = request.form['file']
+    encodedImg = request.form['file']
+    #image_file = base64.b64decode(encodedImg)
+    image_file = helper.decode_and_save_image_and_return_file(encodedImg, target_temp)
     # Save image in temp folder
-    helper.save_image(image_file, target_temp)
+    # need to remove the line below
+    #print("type(image_file)")
+    #print(type(image_file))
+    #print("image_file")
+    #print(image_file)
+    #temp_image_file = helper.save_image_first_time(image_file, target_temp)
     # Save in DB - temp image, location and datetime
     full_path_of_image = helper.get_path_image(image_file, target_temp)
     datetime = request.form['datetime']
@@ -28,7 +38,7 @@ def upload():
     image_id = mydb.insert_pictuers_image(full_path_of_image, datetime, location)
     
     # Check if there is face at image
-    if helper.is_there_a_face_in_the_image(image_file):
+    if helper.is_there_a_face_in_the_image(full_path_of_image):
         # if have - check if know
         check_known = helper.is_the_face_known('static/images/knowns', full_path_of_image)
         # if know save at gallery and remove from temp and update galley DB (know, new path)
@@ -41,7 +51,7 @@ def upload():
             # update in db table picsofknown
             mydb.insert_to_PicsOfKnown(check_known['id'], image_id)
             client_path_image = helper.convert_server_path_to_client_path_image(new_path)
-            return jsonify(action="show image", known=check_known['name'], path_image=client_path_image)
+            return jsonify(action="show image", known=check_known['name'], path_image=client_path_image, image_id=image_id)
 
         # else if no know but have face - asking from user name to face with id of image in gallrey db
         else:
@@ -84,8 +94,11 @@ def enterName():
 
 @app.route("/showImage/<id>", methods=['GET'])
 def showImage(id):
+    # if mydb.get:
+        
     result = mydb.get_full_details_of_image(id)
     result["path"] = helper.convert_server_path_to_client_path_image(result["path"])
+    
     return jsonify( result )
 
 @app.route("/showImages", methods=['GET'])

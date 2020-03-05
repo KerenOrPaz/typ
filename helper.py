@@ -2,6 +2,8 @@ from PIL import Image
 import face_recognition
 import os
 import mydb
+from datetime import datetime
+import base64
 
 APP_ROOT = "/home/rsa-key-20200109/my_flask_app"
 
@@ -76,8 +78,43 @@ def cut_face_and_save_and_return_new_path(image_path):
         print(destination)
         return destination
 
-# save_image(image) void
+def decode_and_save_image_and_return_file(encodedImg, target):
+    #image = base64.b64decode(encodedImg)
+    # datetime
+    now = datetime.now()
+    date_time = now.strftime("%m%d%Y%H%M%S")
+    print("date and time:",date_time)
+    
+    # save image
+    if not os.path.isdir(target):
+        os.mkdir(target)
+    
+    new_path = convert_and_save(encodedImg, date_time, target)
+    
+    return Image.open(new_path)
+    
+def convert_and_save(encodedImg, file_name, target):
+    print("{}/{}.jpg".format(target,file_name))
+    with open("{}/{}.jpg".format(target,file_name), "wb") as fh:
+        fh.write(base64.decodebytes(encodedImg.encode()))
+    
+    return "{}/{}.jpg".format(target,file_name)
 
+# save_image(image) 
+def save_image_first_time(file, target):
+    # check if there folder, if not create
+    if not os.path.isdir(target):
+        os.mkdir(target)
+
+    now = datetime.now()
+    date_time = now.strftime("%m%d%Y%H%M%S")
+    print("date and time:",date_time)
+    
+    filename = date_time
+    full_path_of_image = "/".join([target, filename])
+    
+    file.save(full_path_of_image)
+    return full_path_of_image
 
 def save_image(file, target):
     # check if there folder, if not create
@@ -100,7 +137,8 @@ def move_image(file, target_from, target_to):
 
 
 def get_path_image(file, target):
-    filename = file.filename
+    full_path = file.filename
+    filename = full_path.split("/")[-1]
     return "/".join([target, filename])
 
 def convert_server_path_to_client_path_image(server_path):
