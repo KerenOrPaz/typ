@@ -94,25 +94,29 @@ def enterName():
 
 @app.route("/showImage/<id>", methods=['GET'])
 def showImage(id):
-    # if mydb.get:
-        
-    result = mydb.get_full_details_of_image(id)
-    result["path"] = helper.convert_server_path_to_client_path_image(result["path"])
+    print("----------------------------")
+    print(mydb.is_there_a_face(id))
+    print("----------------------------")
+    if mydb.is_there_a_face(id)==0: 
+        result=mydb.no_face_show(id)
+    else:
+        result = mydb.get_full_details_of_image(id)
     
+    result["path"] = helper.convert_server_path_to_client_path_image(result["path"])
     return jsonify( result )
 
 @app.route("/showImages", methods=['GET'])
 def showImages():
     results = mydb.get_list_of_pictuers()
     for child in results:
-        child["pic_path"] = helper.convert_server_path_to_client_path_image(child["pic_path"])
+        child["path"] = helper.convert_server_path_to_client_path_image(child["path"])
     return jsonify(results)
 
 @app.route("/search/<name_person>", methods=['GET'])
 def search(name_person):
     results = mydb.get_list_of_pictuers_by_name_known(name_person)
     for child in results:
-        child["pic_path"] = helper.convert_server_path_to_client_path_image(child["pic_path"])
+        child["path"] = helper.convert_server_path_to_client_path_image(child["path"])
     return jsonify(results)
 
 

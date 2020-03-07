@@ -154,8 +154,8 @@ def get_list_of_pictuers():
         d=dict()
         child[0]
         d["id"] = child[0]
-        d["pic_path"] = child[1]
-        d["date"] = child[2]
+        d["path"] = child[1]
+        d["datetime"] = child[2]
         d["location"] = child[3]
         result_with_keys.append(d)
         
@@ -168,15 +168,17 @@ def get_list_of_pictuers_by_name_known(name_known):
     mycursor = mydb.cursor()
 
     query_sql = "SELECT Pictuers.* FROM Pictuers JOIN PicsOfKnown ON Pictuers.id = PicsOfKnown.id_of_pic WHERE PicsOfKnown.id_of_pic = Pictuers.id"
-    query_sql +=" AND PicsOfKnown.id_of_known = (SELECT Knowns.id FROM Knowns WHERE Knowns.name LIKE '%s')" % (name_known)
+    query_sql +=" AND PicsOfKnown.id_of_known IN (SELECT Knowns.id FROM Knowns WHERE Knowns.name LIKE '%{}%')".format(name_known)
+    
+    print(query_sql)
     mycursor.execute(query_sql)
     results = mycursor.fetchall()
     result_with_keys=[]
     for child in results:
         d=dict()
         d["id"] = child[0]
-        d["pic_path"] = child[1]
-        d["date"] = child[2]
+        d["path"] = child[1]
+        d["datetime"] = child[2]
         d["location"] = child[3]
         result_with_keys.append(d)
         
@@ -202,5 +204,34 @@ def get_full_details_of_image(id_image):
     d["datetime"] = result[2]
     d["location"] = result[3]
     d["name"] = result[4]
+    
+    return d
+
+def is_there_a_face(image_id):
+    mydb = connect()
+    mycursor = mydb.cursor()
+    
+    query='SELECT COUNT(PicsOfKnown.id_of_pic) FROM Pictuers JOIN PicsOfKnown ON Pictuers.id = PicsOfKnown.id_of_pic WHERE Pictuers.id = %d'  % (int(image_id))
+    
+    mycursor.execute(query)
+    result = mycursor.fetchone()[0]
+    
+    return result
+
+def no_face_show(image_id):
+    mydb = connect()
+    mycursor = mydb.cursor()
+
+    query = 'SELECT Pictuers.* FROM Pictuers where id = %d' % (int(image_id))
+    mycursor.execute(query)
+
+    result = mycursor.fetchone()
+    
+    d = dict()
+    d["id"] = result[0]
+    d["path"] = result[1]
+    d["datetime"] = result[2]
+    d["location"] = result[3]
+ 
     
     return d
