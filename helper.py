@@ -31,21 +31,23 @@ def is_the_face_known(known_folder_path, unknown_image_path):
     for i in range(len(list_of_knowns)):
         known_from_db = list_of_knowns[i]
         path_face_db = known_from_db[2]
+        try:
+            known = face_recognition.load_image_file(path_face_db)
+            known_face_encoding = face_recognition.face_encodings(known)[0]
 
-        known = face_recognition.load_image_file(path_face_db)
-        known_face_encoding = face_recognition.face_encodings(known)[0]
+            unknown_picture = face_recognition.load_image_file(unknown_image_path)
+            unknown_face_encoding = face_recognition.face_encodings(unknown_picture)[
+                0]
 
-        unknown_picture = face_recognition.load_image_file(unknown_image_path)
-        unknown_face_encoding = face_recognition.face_encodings(unknown_picture)[
-            0]
+            results = face_recognition.compare_faces(
+                [known_face_encoding], unknown_face_encoding)
 
-        results = face_recognition.compare_faces(
-            [known_face_encoding], unknown_face_encoding)
-
-        if results[0]:
-            is_known = True
-            name_face_db = known_from_db[1]
-            id_face_db = known_from_db[0]
+            if results[0]:
+                is_known = True
+                name_face_db = known_from_db[1]
+                id_face_db = known_from_db[0]
+        except:
+            print("Can't load knonw")
 
     d = dict()
     d['status'] = is_known
