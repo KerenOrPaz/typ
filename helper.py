@@ -23,31 +23,51 @@ def is_there_a_face_in_the_image(pic):
 # is the face_known(image) return true/false
 
 
-def is_the_face_known(known_folder_path, unknown_image_path):
+def is_the_face_known(unknown_image_path):
     is_known = False
     name_face_db = ""
     id_face_db = 0
     list_of_knowns = mydb.get_list_of_knows()
+    
+    # id = list_of_knowns[0]["id"]
+    # name_known = list_of_knowns[0]["name_known"]
+    # pic_path = list_of_knowns[0]["pic_path"]
+    # face_location = list_of_knowns[0]["face_location"]
+    
+    known_faces_encodings = []
     for i in range(len(list_of_knowns)):
         known_from_db = list_of_knowns[i]
-        path_face_db = known_from_db[2]
+        
+        name_known = known_from_db["name_known"]
+        pic_path = known_from_db["pic_path"]
+        face_location = known_from_db["face_location"]
+        
         try:
-            known = face_recognition.load_image_file(path_face_db)
-            known_face_encoding = face_recognition.face_encodings(known)[0]
-
-            unknown_picture = face_recognition.load_image_file(unknown_image_path)
-            unknown_face_encoding = face_recognition.face_encodings(unknown_picture)[
-                0]
-
-            results = face_recognition.compare_faces(
-                [known_face_encoding], unknown_face_encoding)
-
-            if results[0]:
-                is_known = True
-                name_face_db = known_from_db[1]
-                id_face_db = known_from_db[0]
+            # load image
+            known_after_load_image = face_recognition.load_image_file(pic_path)
+            # encodings
+            known_encodings = face_recognition.face_encodings(known_after_load_image, known_face_locations=face_location, num_jitters=1)[0]
+            # add to list of faces encodings
+            known_faces_encodings.append(known_encodings)
         except:
-            print("Can't load knonw")
+            print("Can't load knonw of {}".format(name_known))
+        
+    try:
+        # load image
+        unknown_after_load_image = face_recognition.load_image_file(unknown_image_path)
+        # encodings
+        unknown_encodings = face_recognition.face_encodings(unknown_after_load_image)[0]
+    except:
+        print("Can't load unknonw")
+        
+    result = face_recognition.compare_faces(known_faces_encodings, unknown_encodings, tolerance=0.56)
+    
+    for i in range(len(results)):
+        if results[i]:
+            list_of_knowns[i]
+            is_known = True
+            name_face_db = list_of_knowns["name_known"]
+            id_face_db = list_of_knowns["id"]
 
     d = dict()
     d['status'] = is_known

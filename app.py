@@ -3,9 +3,12 @@ import helper
 import mydb
 from flask import Flask, render_template, request, jsonify
 from flask_json import FlaskJSON, JsonError, json_response
+import face_recognition
 
 app = Flask(__name__)
 APP_ROOT = "/home/rsa-key-20200109/my_flask_app"
+target_gallery = os.path.join(APP_ROOT, 'static/images/gallery')
+target_temp = os.path.join(APP_ROOT, 'static/images/temp')
 
 @app.route("/")
 def index():
@@ -15,13 +18,7 @@ def index():
 @app.route("/upload", methods=['POST'])
 def upload():
     print("/upload")
-    target_gallery = os.path.join(APP_ROOT, 'static/images/gallery')
-    target_temp = os.path.join(APP_ROOT, 'static/images/temp')
-    
-    # print(request.form['file'])
-    #image_file = request.form['file']
     encodedImg = request.form['file']
-    #image_file = base64.b64decode(encodedImg)
     image_file = helper.decode_and_save_image_and_return_file(encodedImg, target_temp)
     # Save image in temp folder
     # need to remove the line below
@@ -40,16 +37,19 @@ def upload():
     # Check if there is face at image
     if helper.is_there_a_face_in_the_image(full_path_of_image):
         # if have - check if know
-        check_known = helper.is_the_face_known('static/images/knowns', full_path_of_image)
+        # check_known = helper.is_the_face_known(full_path_of_image)
+        check_known = helper.is_the_face_known(full_path_of_image)
         # if know save at gallery and remove from temp and update galley DB (know, new path)
         if check_known['status']:
-            # Save image in gallery folder and delete from temp folder
+            # Save image in gallery folder 
             new_path = helper.save_image(image_file, target_gallery)
+            # delete from temp folder
             os.remove(full_path_of_image)
             # update path in db
             mydb.update_path_original_image(image_id, new_path)
             # update in db table picsofknown
             mydb.insert_to_PicsOfKnown(check_known['id'], image_id)
+            # convert server path to client path of image
             client_path_image = helper.convert_server_path_to_client_path_image(new_path)
             return jsonify(action="show image", known=check_known['name'], path_image=client_path_image, image_id=image_id)
 
@@ -80,10 +80,9 @@ def enterName():
     # save in knowns DB and get known id
     known_id = mydb.insert_known_image(name_face, face_path)
     # move original image to gallrey folder
-    target_to_gallery = os.path.join(APP_ROOT, 'static/images/gallery')
-    if not os.path.isdir(target_to_gallery):
-        os.mkdir(target_to_gallery)
-    new_path = "/".join([target_to_gallery, path_original_image.split('/')[-1]])
+    if not os.path.isdir(target_gallery):
+        os.mkdir(target_gallery)
+    new_path = "/".join([target_gallery, path_original_image.split('/')[-1]])
     # update gallery DB (path)
     mydb.update_path_original_image(image_id, new_path)
     # add to PicsOfKnown DB (image_id, known_id)
@@ -130,3 +129,65 @@ def delete(gallery_id):
         return jsonify(action="Fail")
 
     return jsonify(action="done")
+
+@app.route("/getLocationOfFace", methods=['GET'])
+def test():
+    image = face_recognition.load_image_file("/home/rsa-key-20200109/my_flask_app/static/images/gallery/03082020163444.jpg")
+    locations = face_recognition.face_locations(image)
+    return location
+    # locations = [(172,603,726,48)]
+    #face_locations = face_recognition.face_locations(image, number_of_times_to_upsample=2)
+    #print(face_locations)
+    #print(type(face_locations))
+    #print(face_locations[0])
+    #print(type(face_locations[0]))
+    face_encodings = face_recognition.face_encodings(image, known_face_locations=locations, num_jitters=1)
+    print('face_encodings')
+    print(face_encodings)
+    print(type(face_encodings))
+    #test_face = face_recognition.face_encodings(image)
+    return jsonify(test_face='test_face')
+
+@app.route("/forListLoctaionOfFaceToCompareFaces", methods=['GET'])
+def test2():
+    # image_test = face_recognition.load_image_file("/home/rsa-key-20200109/my_flask_app/static/images/gallery/03082020163537.jpg")
+    # image_2 = face_recognition.load_image_file("/home/rsa-key-20200109/my_flask_app/static/images/gallery/03112020181843.jpg")
+    # image_3 = face_recognition.load_image_file("/home/rsa-key-20200109/my_flask_app/static/images/gallery/03102020155859.jpg")
+    
+    # face_test = face_recognition.face_locations(image_test)
+    # face_2 = face_recognition.face_locations(image_2)
+    # face_3 = face_recognition.face_locations(image_3)
+    
+    face_location_1 = [(0,0,0,0)]
+    face_location_2 = [(0,0,0,0)]
+    face_location_3 = [(0,0,0,0)]
+    
+    face_encodings_test = face_recognition.face_encodings(image_test, known_face_locations=face_location_1, num_jitters=1)[0]
+    face_encodings_2 = face_recognition.face_encodings(image_2, known_face_locations=face_location_2, num_jitters=1)[0]
+    face_encodings_3 = face_recognition.face_encodings(image_3, known_face_locations=face_location_3, num_jitters=1)[0]
+    
+    known_faces = [face_encodings_2, face_encodings_3]
+    result = face_recognition.compare_faces(known_faces, face_encodings_test, tolerance=0.56)
+    return result
+
+    print(result)
+    print(type(result))
+    
+    distance = face_recognition.face_distance(known_faces, face_encodings_test)
+    print('distance')
+    print(distance)
+    print(type(distance))
+    
+    #face_list = face_recognition.face_locations(image)
+    #locations = [(172,603,726,48)]
+    #face_locations = face_recognition.face_locations(image, number_of_times_to_upsample=2)
+    #print(face_locations)
+    #print(type(face_locations))
+    #print(face_locations[0])
+    #print(type(face_locations[0]))
+    #face_encodings = face_recognition.face_encodings(image, known_face_locations=locations, num_jitters=1)
+    # print('face_encodings')
+    # print(face_encodings)
+    # print(type(face_encodings))
+    #test_face = face_recognition.face_encodings(image)
+    return jsonify(test_face='test_face')
