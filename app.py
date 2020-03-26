@@ -20,6 +20,7 @@ def upload():
     print("/upload")
     encodedImg = request.form['file']
     image_file = helper.decode_and_save_image_and_return_file(encodedImg, target_temp)
+
     # Save image in temp folder
     # need to remove the line below
     #print("type(image_file)")
@@ -32,8 +33,8 @@ def upload():
     datetime = request.form['datetime']
     location = request.form['location']
     # insert DB
-    image_id = mydb.insert_pictuers_image(full_path_of_image, datetime, location)
-    
+    image_id = mydb.insert_all_pictuers(full_path_of_image, datetime, location)
+    print("Check if there is face at image")
     # Check if there is face at image
     if helper.is_there_a_face_in_the_image(full_path_of_image):
         # if have - check if know
@@ -41,18 +42,20 @@ def upload():
         check_known = helper.is_the_face_known(full_path_of_image)
         # if know save at gallery and remove from temp and update galley DB (know, new path)
         if check_known['status']:
-            # Save image in gallery folder 
+            # Save image in gallery folder
             new_path = helper.save_image(image_file, target_gallery)
             # delete from temp folder
             os.remove(full_path_of_image)
             # update path in db
             mydb.update_path_original_image(image_id, new_path)
             # update in db table picsofknown
-            mydb.insert_to_PicsOfKnown(check_known['id'], image_id)
+            path_image = mydb.get_image_path_by_id(image_id)
+            image = face_recognition.load_image_file(path_image)
+            face_location = face_recognition.face_locations(image, number_of_times_to_upsample=2)
+            mydb.insert_pictuers_with_face(image_id, face_location,check_known['name'])
             # convert server path to client path of image
             client_path_image = helper.convert_server_path_to_client_path_image(new_path)
             return jsonify(action="show image", known=check_known['name'], path_image=client_path_image, image_id=image_id)
-
         # else if no know but have face - asking from user name to face with id of image in gallrey db
         else:
             return jsonify(action="ask name", image_id=image_id)
@@ -75,18 +78,22 @@ def enterName():
     image_id = request.form['galleryId']
     # cut face from original image and save in knowns folder
     path_original_image = mydb.get_image_path_by_id(image_id)
-    # cut and save
-    face_path = helper.cut_face_and_save_and_return_new_path(path_original_image)
-    # save in knowns DB and get known id
-    known_id = mydb.insert_known_image(name_face, face_path)
+    # load image by face_recognition
+    image = face_recognition.load_image_file(path_original_image)
+    # get faces loaciton
+    faces_location = face_recognition.face_locations(image, number_of_times_to_upsample=2)
+    # one face
+    face_location = faces_location[0]
+    # insert to db
+    mydb.insert_pictuers_with_face(image_id, face_location, name_face)
+    
     # move original image to gallrey folder
     if not os.path.isdir(target_gallery):
         os.mkdir(target_gallery)
     new_path = "/".join([target_gallery, path_original_image.split('/')[-1]])
     # update gallery DB (path)
     mydb.update_path_original_image(image_id, new_path)
-    # add to PicsOfKnown DB (image_id, known_id)
-    mydb.insert_to_PicsOfKnown(known_id, image_id)
+    
     os.rename(path_original_image, new_path)
     return jsonify(action="show image", image_id=image_id)
 
@@ -104,6 +111,7 @@ def showImage(id):
     result["path"] = helper.convert_server_path_to_client_path_image(result["path"])
     return jsonify( result )
 
+
 @app.route("/showImages", methods=['GET'])
 def showImages():
     results = mydb.get_list_of_pictuers()
@@ -118,11 +126,11 @@ def search(name_person):
         child["path"] = helper.convert_server_path_to_client_path_image(child["path"])
     return jsonify(results)
 
-
+#finished till here update of db need to continue from here.
 @app.route("/delete/<gallery_id>", methods=['DELETE'])
 def delete(gallery_id):
     image_path = mydb.get_image_path_by_id(gallery_id)
-    mydb.delete_from_pictuers(gallery_id)
+    mydb.delete_from_all_pictuers(gallery_id)
     try:
         os.remove(image_path)
     except:

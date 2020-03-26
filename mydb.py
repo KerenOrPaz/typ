@@ -1,9 +1,8 @@
 import mysql.connector
+import helper
 
-pictuers_table = 'Pictuers'
-knowns_table = 'Knowns'
-pics_of_known_table = 'PicsOfKnown'
-
+all_pictuers_table = 'all_pictuers'
+pictuers_with_face_table = 'pictuers_with_face'
 
 def connect():
     return mysql.connector.connect(
@@ -14,6 +13,7 @@ def connect():
     )
 
 
+
 def get_last_id(table):
     mydb = connect()
     mycursor = mydb.cursor()
@@ -22,177 +22,93 @@ def get_last_id(table):
     return mycursor.fetchone()[0]
 
 
-def insert_known_image(name_face, face_path):
+def insert_pictuers_with_face(id_all_pics, face_location, name_known):
     mydb = connect()
     mycursor = mydb.cursor()
-    sql = "INSERT INTO " + knowns_table + \
-        " (name, face_path) VALUES (%s, %s)"
-    val = (name_face, face_path)
+    face_location_string = helper.tupleToString(face_location, ",")
+    
+    sql = "INSERT INTO " + pictuers_with_face_table + \
+        " (id_all_pics, face_location, name_known) VALUES (%s, %s, %s)"
+    val = (int(id_all_pics), face_location_string, name_known)
 
     mycursor.execute(sql, val)
     mydb.commit()
     # get the id
-    return get_last_id(knowns_table)
+    return get_last_id(pictuers_with_face_table)
 
 
-def insert_temp_image(path, datetime, location):
+def insert_all_pictuers(path, datetime, location):
     mydb = connect()
     mycursor = mydb.cursor()
-    sql = "INSERT INTO " + pictuers_table + \
-        " (pic_path, date, location) VALUES (%s, %s, %s)"
+    sql = "INSERT INTO " + all_pictuers_table + \
+        " (pic_path, timestamp, location) VALUES (%s, %s, %s)"
     val = (path, datetime, location)
 
     mycursor.execute(sql, val)
 
     mydb.commit()
-    return get_last_id(pictuers_table)
-
-
-def insert_pictuers_image(path, datetime, location):
-    mydb = connect()
-    mycursor = mydb.cursor()
-    sql = "INSERT INTO " + pictuers_table + \
-        " (pic_path, date, location) VALUES (%s, %s, %s)"
-    val = (path, datetime, location)
-
-    mycursor.execute(sql, val)
-
-    mydb.commit()
-    return get_last_id(pictuers_table)
-
-
-def insert_to_PicsOfKnown(id_face, id_full_image):
-    mydb = connect()
-    mycursor = mydb.cursor()
-    sql = "INSERT INTO " + pics_of_known_table + \
-        " (id_of_known, id_of_pic) VALUES (%s, %s)"
-    val = (id_face, id_full_image)
-
-    mycursor.execute(sql, val)
-
-    mydb.commit()
-    return get_last_id(pics_of_known_table)
-
-
-def update_path_original_image(image_id, image_path):
-    mydb = connect()
-    mycursor = mydb.cursor()
-
-    query = ("UPDATE %s SET pic_path = '%s' WHERE id = %d" % (pictuers_table, image_path, int(image_id)))
-    mycursor.execute(query)
-
-    mydb.commit()
-
-
-def delete_from_knowns(image_id):
-    mydb = connect()
-    mycursor = mydb.cursor()
-
-    mycursor.execute('DELETE FROM %s WHERE id = %d' % (knowns_table, image_id))
-
-    mydb.commit()
-
-
-def delete_from_pictuers(image_id):
-    mydb = connect()
-    mycursor = mydb.cursor()
-
-    query = 'DELETE FROM %s WHERE id = %d' % (pictuers_table, int(image_id))
-    print(query)
-
-    mycursor.execute(query)
-
-    mydb.commit()
-    
-
-
-
-
-def delete_from_PicsOfKnowns(image_id):
-    mydb = connect()
-    mycursor = mydb.cursor()
-
-    mycursor.execute('DELETE FROM %s WHERE id = %d' % (pics_of_known_table, image_id))
-
-    mydb.commit()
-
+    return get_last_id(all_pictuers_table)
 
 def get_image_path_by_id(image_id):
     mydb = connect()
     mycursor = mydb.cursor()
-
-    query = 'SELECT pic_path FROM %s WHERE id = %d' % (pictuers_table, int(image_id))
+    
+    query = 'SELECT pic_path FROM %s WHERE id = %d' % (all_pictuers_table, int(image_id))
 
     mycursor.execute(query)
 
 
     return mycursor.fetchone()[0]
 
-def get_list_of_knows():
+
+def update_path_original_image(image_id, image_path):
     mydb = connect()
     mycursor = mydb.cursor()
 
-    sql = "SELECT id, name, face_path FROM %s" % (knowns_table)
+    query = ("UPDATE %s SET pic_path = '%s' WHERE id = %d" % (all_pictuers_table, image_path, int(image_id)))
+    mycursor.execute(query)
 
-    mycursor.execute(sql)
+    mydb.commit()
 
-    result = mycursor.fetchall()
 
+
+
+
+def is_there_a_face(image_id):
+    mydb = connect()
+    mycursor = mydb.cursor()
+    
+    query='SELECT COUNT(pictuers_with_face.id) FROM all_pictuers JOIN pictuers_with_face ON all_pictuers.id = pictuers_with_face.id_all_pics WHERE all_pictuers.id = %d' % (int(image_id))
+    
+    mycursor.execute(query)
+    result = mycursor.fetchone()[0]
+    
     return result
 
-def get_list_of_pictuers():
+
+def no_face_show(image_id):
     mydb = connect()
     mycursor = mydb.cursor()
 
-    sql = "SELECT id, pic_path, date, location FROM %s" % (pictuers_table)
+    query = 'SELECT all_pictuers.* FROM all_pictuers WHERE all_pictuers.id = %d AND all_pictuers.id NOT IN (SELECT pictuers_with_face.id_all_pics FROM pictuers_with_face )' % (int(image_id))
+    mycursor.execute(query)
 
-    mycursor.execute(sql)
-
-    results = mycursor.fetchall()
-    result_with_keys=[]
-    for child in results:
-        d=dict()
-        child[0]
-        d["id"] = child[0]
-        d["path"] = child[1]
-        d["datetime"] = child[2]
-        d["location"] = child[3]
-        result_with_keys.append(d)
-        
+    result = mycursor.fetchone()
     
+    d = dict()
+    d["id"] = result[0]
+    d["path"] = result[1]
+    d["datetime"] = result[2]
+    d["location"] = result[3]
+ 
     
-    return result_with_keys
-                                                     
-def get_list_of_pictuers_by_name_known(name_known):
-    mydb = connect()
-    mycursor = mydb.cursor()
-
-    query_sql = "SELECT Pictuers.* FROM Pictuers JOIN PicsOfKnown ON Pictuers.id = PicsOfKnown.id_of_pic WHERE PicsOfKnown.id_of_pic = Pictuers.id"
-    query_sql +=" AND PicsOfKnown.id_of_known IN (SELECT Knowns.id FROM Knowns WHERE Knowns.name LIKE '%{}%')".format(name_known)
-    
-    print(query_sql)
-    mycursor.execute(query_sql)
-    results = mycursor.fetchall()
-    result_with_keys=[]
-    for child in results:
-        d=dict()
-        d["id"] = child[0]
-        d["path"] = child[1]
-        d["datetime"] = child[2]
-        d["location"] = child[3]
-        result_with_keys.append(d)
-        
-
-    
-    return result_with_keys
-
+    return d
 
 def get_full_details_of_image(id_image):
     mydb = connect()
     mycursor = mydb.cursor()
 
-    query = 'SELECT Pictuers.*, Knowns.name FROM Pictuers JOIN PicsOfKnown JOIN Knowns WHERE PicsOfKnown.id_of_pic=Pictuers.id AND PicsOfKnown.id_of_known = Knowns.id AND Pictuers.id= %d' % (int(id_image))
-    print(query)
+    query = 'SELECT all_pictuers.*, pictuers_with_face.name_known FROM all_pictuers JOIN pictuers_with_face ON all_pictuers.id = pictuers_with_face.id_all_pics WHERE all_pictuers.id= %d' % (int(id_image))
 
     mycursor.execute(query)
 
@@ -207,31 +123,81 @@ def get_full_details_of_image(id_image):
     
     return d
 
-def is_there_a_face(image_id):
-    mydb = connect()
-    mycursor = mydb.cursor()
-    
-    query='SELECT COUNT(PicsOfKnown.id_of_pic) FROM Pictuers JOIN PicsOfKnown ON Pictuers.id = PicsOfKnown.id_of_pic WHERE Pictuers.id = %d'  % (int(image_id))
-    
-    mycursor.execute(query)
-    result = mycursor.fetchone()[0]
-    
-    return result
-
-def no_face_show(image_id):
+def get_list_of_pictuers():
     mydb = connect()
     mycursor = mydb.cursor()
 
-    query = 'SELECT Pictuers.* FROM Pictuers where id = %d' % (int(image_id))
-    mycursor.execute(query)
+    sql = "SELECT all_pictuers.* FROM %s" % (all_pictuers_table)
 
-    result = mycursor.fetchone()
+    mycursor.execute(sql)
+
+    results = mycursor.fetchall()
+    result_with_keys=[]
+    for child in results:
+        d=dict()
+        child[0]
+        d["id"] = child[0]
+        d["path"] = child[1]
+        d["datetime"] = child[2]
+        d["location"] = child[3]
+        result_with_keys.append(d)
+        
+    return result_with_keys
     
-    d = dict()
-    d["id"] = result[0]
-    d["path"] = result[1]
-    d["datetime"] = result[2]
-    d["location"] = result[3]
- 
+                                                 
+def get_list_of_pictuers_by_name_known(name_known):
+    mydb = connect()
+    mycursor = mydb.cursor()
+
+    query_sql = "SELECT all_pictuers.* FROM all_pictuers JOIN pictuers_with_face ON all_pictuers.id = pictuers_with_face.id_all_pics WHERE pictuers_with_face.name_known LIKE '%{}%')".format(name_known)
     
-    return d
+    print(query_sql)
+    mycursor.execute(query_sql)
+    results = mycursor.fetchall()
+    result_with_keys=[]
+    for child in results:
+        d=dict()
+        d["id"] = child[0]
+        d["path"] = child[1]
+        d["datetime"] = child[2]
+        d["location"] = child[3]
+        result_with_keys.append(d)
+        
+    return result_with_keys
+
+def delete_from_all_pictuers(image_id):
+    mydb = connect()
+    mycursor = mydb.cursor()
+    
+    query1 = 'DELETE FROM %s WHERE id_all_pics = %d' % (pictuers_with_face_table, int(image_id))
+    query2 = 'DELETE FROM %s WHERE id = %d' % (all_pictuers_table, int(image_id))
+
+    mycursor.execute(query1)
+    mydb.commit()
+    mycursor.execute(query2)
+    mydb.commit()
+    
+
+
+
+def get_list_of_knows():
+    mydb = connect()
+    mycursor = mydb.cursor()
+
+    sql = "SELECT all_pictuers.id, t3.name_known, all_pictuers.pic_path, t3.face_location FROM ( SELECT t1.id, t1.id_all_pics, t1.face_location, t1.name_known FROM pictuers_with_face t1 JOIN ( SELECT MIN(pictuers_with_face.id) AS id, pictuers_with_face.name_known AS 'name_known' FROM pictuers_with_face GROUP BY pictuers_with_face.name_known ) t2 ON t1.id = t2.id ) t3 JOIN all_pictuers ON t3.id_all_pics = all_pictuers.id"
+    
+
+    mycursor.execute(sql)
+
+    results = mycursor.fetchall()
+    result_with_keys=[]
+    for child in results:
+        d=dict()
+        d["id"] = child[0]
+        d["name_known"] = child[1]
+        d["pic_path"] = child[2]
+        d["face_location"] = child[3]
+        result_with_keys.append(d)
+    
+
+    return result_with_keys

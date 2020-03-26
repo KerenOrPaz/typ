@@ -40,17 +40,18 @@ def is_the_face_known(unknown_image_path):
         
         name_known = known_from_db["name_known"]
         pic_path = known_from_db["pic_path"]
-        face_location = known_from_db["face_location"]
+        face_location_string = known_from_db["face_location"]
         
+        face_location = stringToTuple(face_location_string, ',')
         try:
             # load image
             known_after_load_image = face_recognition.load_image_file(pic_path)
             # encodings
-            known_encodings = face_recognition.face_encodings(known_after_load_image, known_face_locations=face_location, num_jitters=1)[0]
+            known_encodings = face_recognition.face_encodings(known_after_load_image, known_face_locations=[face_location], num_jitters=1)[0]
             # add to list of faces encodings
             known_faces_encodings.append(known_encodings)
         except:
-            print("Can't load knonw of {}".format(name_known))
+            print("Can't load knonw of {} in {}".format(name_known, log))
         
     try:
         # load image
@@ -62,12 +63,12 @@ def is_the_face_known(unknown_image_path):
         
     result = face_recognition.compare_faces(known_faces_encodings, unknown_encodings, tolerance=0.56)
     
-    for i in range(len(results)):
-        if results[i]:
-            list_of_knowns[i]
+    for i in range(len(result)):
+        if result[i]:
+            known = list_of_knowns[i]
             is_known = True
-            name_face_db = list_of_knowns["name_known"]
-            id_face_db = list_of_knowns["id"]
+            name_face_db = known["name_known"]
+            id_face_db = known["id"]
 
     d = dict()
     d['status'] = is_known
@@ -174,3 +175,16 @@ def convert_server_path_to_client_path_image(server_path):
             flag = True
     print(path)
     return path
+
+def tupleToString(tup, key):
+    string = '('
+    for var in range(len(tup)):
+        string += str(tup[var])
+        if var < len(tup) - 1:
+            string += key
+    
+    string += ')'
+    return string
+
+def stringToTuple(string, key):
+    return tuple(map(int, string[1:-1].split(key)))
