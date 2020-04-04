@@ -22,16 +22,17 @@ def get_last_id(table):
     return mycursor.fetchone()[0]
 
 
-def insert_pictuers_with_face(id_all_pics, face_location, name_known):
+def insert_pictuers_with_face(id_all_pics, face_locations, name_knowns):
     mydb = connect()
     mycursor = mydb.cursor()
-    face_location_string = helper.tupleToString(face_location, ",")
-    
-    sql = "INSERT INTO " + pictuers_with_face_table + \
-        " (id_all_pics, face_location, name_known) VALUES (%s, %s, %s)"
-    val = (int(id_all_pics), face_location_string, name_known)
 
-    mycursor.execute(sql, val)
+    for i in range(len(face_locations)):
+        if name_knowns[i] != 'None':
+            sql = "INSERT INTO " + pictuers_with_face_table + " (id_all_pics, face_location, name_known) VALUES (%s, %s, %s)"
+            val = (int(id_all_pics), face_locations[i], name_knowns[i])
+            mycursor.execute(sql, val)
+
+
     mydb.commit()
     # get the id
     return get_last_id(pictuers_with_face_table)
@@ -108,7 +109,7 @@ def get_full_details_of_image(id_image):
     mydb = connect()
     mycursor = mydb.cursor()
 
-    query = 'SELECT all_pictuers.*, pictuers_with_face.name_known FROM all_pictuers JOIN pictuers_with_face ON all_pictuers.id = pictuers_with_face.id_all_pics WHERE all_pictuers.id= %d' % (int(id_image))
+    query = "SELECT all_pictuers.*, knowns.names FROM all_pictuers JOIN (SELECT GROUP_CONCAT(t1.name_known SEPARATOR ', ') as names, t1.id_all_pics FROM pictuers_with_face t1 WHERE t1.id_all_pics = %d GROUP BY t1.id_all_pics) knowns ON all_pictuers.id = knowns.id_all_pics" % (int(id_image))
 
     mycursor.execute(query)
 
@@ -119,7 +120,7 @@ def get_full_details_of_image(id_image):
     d["path"] = result[1]
     d["datetime"] = result[2]
     d["location"] = result[3]
-    d["name"] = result[4]
+    d["names"] = result[4]
     
     return d
 
@@ -149,7 +150,7 @@ def get_list_of_pictuers_by_name_known(name_known):
     mydb = connect()
     mycursor = mydb.cursor()
 
-    query_sql = "SELECT all_pictuers.* FROM all_pictuers JOIN pictuers_with_face ON all_pictuers.id = pictuers_with_face.id_all_pics WHERE pictuers_with_face.name_known LIKE '%{}%')".format(name_known)
+    query_sql = "SELECT all_pictuers.* FROM all_pictuers JOIN pictuers_with_face ON all_pictuers.id = pictuers_with_face.id_all_pics WHERE pictuers_with_face.name_known LIKE '%{}%'".format(name_known)
     
     print(query_sql)
     mycursor.execute(query_sql)

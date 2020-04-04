@@ -4,6 +4,7 @@ import os
 import mydb
 from datetime import datetime
 import base64
+import cv2
 
 APP_ROOT = "/home/rsa-key-20200109/my_flask_app"
 
@@ -24,15 +25,14 @@ def is_there_a_face_in_the_image(pic):
 
 
 def is_the_face_known(unknown_image_path):
-    is_known = False
-    name_face_db = ""
-    id_face_db = 0
-    list_of_knowns = mydb.get_list_of_knows()
+    are_knowns = []
+    are_unknowns = []
+    face_names = []
     
-    # id = list_of_knowns[0]["id"]
-    # name_known = list_of_knowns[0]["name_known"]
-    # pic_path = list_of_knowns[0]["pic_path"]
-    # face_location = list_of_knowns[0]["face_location"]
+    at_least_unknown = False
+    
+    
+    list_of_knowns = mydb.get_list_of_knows()
     
     known_faces_encodings = []
     for i in range(len(list_of_knowns)):
@@ -56,24 +56,65 @@ def is_the_face_known(unknown_image_path):
     try:
         # load image
         unknown_after_load_image = face_recognition.load_image_file(unknown_image_path)
+        # locations of unknowns
+        faces_loction_unkonw = face_recognition.face_locations(unknown_after_load_image)
         # encodings
-        unknown_encodings = face_recognition.face_encodings(unknown_after_load_image)[0]
+        unknown_faces_encodings = face_recognition.face_encodings(unknown_after_load_image, known_face_locations=faces_loction_unkonw, num_jitters=1)
     except:
         print("Can't load unknonw")
         
-    result = face_recognition.compare_faces(known_faces_encodings, unknown_encodings, tolerance=0.56)
-    
-    for i in range(len(result)):
-        if result[i]:
-            known = list_of_knowns[i]
-            is_known = True
-            name_face_db = known["name_known"]
-            id_face_db = known["id"]
+    for i in range(len(unknown_faces_encodings)):
+        unknown_faces_encoding = unknown_faces_encodings[i]
+        result = face_recognition.compare_faces(known_faces_encodings, unknown_faces_encoding, tolerance=0.56)
+        face_location_string = tupleToString(faces_loction_unkonw[i], ",")
+        
+        if not any(result):
+            d = dict()
+            d['index'] = i
+            d['face_location'] = face_location_string
+            are_unknowns.append(d)
+            at_least_unknown = True
+            face_names.append(None)
+        else:
+            for j in range(len(result)):
+                if result[j]:
+                    known = list_of_knowns[j]
+                    d = dict()
+                    d['index'] = j
+                    d['name'] = known["name_known"]
+                    d['id'] = known["id"]
+                    d['face_location'] = face_location_string
+                    are_knowns.append(d)
+                    face_names.append(known["name_known"])
+                    break
+
+    temp_mark_image = ""        
+    if at_least_unknown:
+        # create temp image with mark faces
+        image = cv2.imread(unknown_image_path)
+        index = 1
+        for (top, right, bottom, left), name in zip(faces_loction_unkonw, face_names):
+            # Draw a box around the face
+            cv2.rectangle(image, (left, top), (right, bottom), (0, 0, 255), 2)
+
+            # Draw a label with a name below the face
+            cv2.rectangle(image, (left, bottom - 35), (right, bottom), (0, 0, 255), cv2.FILLED)
+            font = cv2.FONT_HERSHEY_DUPLEX
+            if name == None:
+                name = "%d: unkown" % (index)
+                index += 1
+            cv2.putText(image, name, (left + 6, bottom - 6), font, 1.0, (255, 255, 255), 2)
+            
+        retval, buffer = cv2.imencode('.jpg', image)
+        temp_mark_image = base64.b64encode(buffer)
+        temp_mark_image = str(temp_mark_image, 'utf-8')
 
     d = dict()
-    d['status'] = is_known
-    d['name'] = name_face_db
-    d['id'] = id_face_db
+    d['at_least_unknown'] = at_least_unknown
+    d['all_knowns'] = not at_least_unknown
+    d['list_knowns'] = are_knowns
+    d['list_unknowns'] = are_unknowns
+    d['image'] = temp_mark_image
     return d
 
 
@@ -114,12 +155,14 @@ def decode_and_save_image_and_return_file(encodedImg, target):
     
     new_path = convert_and_save(encodedImg, date_time, target)
     
-    return Image.open(new_path)
+    return Image.open(r"%s" % new_path)
     
 def convert_and_save(encodedImg, file_name, target):
     print("{}/{}.jpg".format(target,file_name))
     with open("{}/{}.jpg".format(target,file_name), "wb") as fh:
         fh.write(base64.decodebytes(encodedImg.encode()))
+        #fh.write(base64.standard_b64encode(encodedImg.encode()))
+        os.chmod("{}/{}.jpg".format(target,file_name), 0o777)
     
     return "{}/{}.jpg".format(target,file_name)
 
